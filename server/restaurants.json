@@ -1,0 +1,41 @@
+[
+    {
+        "id": "IDtLPgUrqorrpqSLdfMhZQ",
+        "name": "Helena Avenue Bakery",
+        "address": "131 Anacapa St, Ste C",
+        "stars": 4,
+        "review_count": 389,
+        "categories": [
+            "Salad",
+            "Coffee & Tea",
+            "Breakfast & Brunch",
+            "Sandwiches",
+            "Bakeries"
+        ]
+    },
+    {
+        "id": "SZU9c8V2GuREDN5KgyHFJw",
+        "name": "Santa Barbara Shellfish Company",
+        "address": "230 Stearns Wharf",
+        "stars": 3.5,
+        "review_count": 2404,
+        "categories": [
+            "Live/Raw Food",
+            "Seafood",
+            "Beer Bar",
+            "Beer",
+            "Wine & Spirits",
+            "Bars"
+        ]
+    },
+    {
+        "id": "ifjluUv4VASwmFqEp8cWlQ",
+        "name": "Marty's Pizza",
+        "address": "2733 De La Vina St",
+        "stars": 3.1,
+        "review_count": 64,
+        "categories": [
+            "Pizza"
+        ]
+    }
+]

@@ -1,0 +1,140 @@
+{
+    "restaurant_card": {
+        "card": {
+            "id": "{id}",
+            "widgets": [
+                {
+                    "type": "row",
+                    "mainAxisAlignment": "start",
+                    "crossAxisAlignment": "end",
+                    "children": [
+                        {
+                            "type": "column",
+                            "children": [
+                                {
+                                    "type": "text",
+                                    "value": "{name}",
+                                    "style": {
+                                        "fontSize": 24,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "value": "{address}",
+                                    "style": {
+                                        "fontSize": 14,
+                                        "color": "#666666"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "column",
+                            "crossAxisAlignment": "end",
+                            "children": [
+                                {
+                                    "type": "text",
+                                    "value": "리뷰 {review_count}개",
+                                    "style": {
+                                        "fontSize": 16,
+                                        "color": "#888888"
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "value": "❤️ {stars}",
+                                    "style": {
+                                        "fontSize": 16
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "column",
+                            "crossAxisAlignment": "end",
+                            "children": [
+                                {
+                                    "type": "button",
+                                    "text": "예약",
+                                    "action": "{name}로 예약해줘."
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "reservation_state": {
+        "window": {
+            "id": "{id}",
+            "widgets": [
+                {
+                    "type": "row",
+                    "mainAxisAlignment": "start",
+                    "children": [
+                        {
+                            "type": "column",
+                            "children": [
+                                {
+                                    "type": "text",
+                                    "value": "예약할 레스토랑 - {name}",
+                                    "style": {
+                                        "fontSize": 24,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "type": "row",
+                                    "crossAxisAlignment": "end",
+                                    "children": [
+                                        {
+                                            "type": "text",
+                                            "value": "리뷰 {review_count}개",
+                                            "style": {
+                                                "fontSize": 16,
+                                                "color": "#888888"
+                                            }
+                                        },
+                                        {
+                                            "type": "text",
+                                            "value": "❤️ {stars}",
+                                            "style": {
+                                                "fontSize": 16
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "column",
+                            "children": [
+                                {
+                                    "type": "text",
+                                    "value": "예약 일시: {datetime}"
+                                },
+                                {
+                                    "type": "text",
+                                    "value": "인원수: {people} 명"
+                                },
+                                {
+                                    "type": "dropbox",
+                                    "label": "상태: ",
+                                    "items": [
+                                        "생성",
+                                        "대기",
+                                        "확정",
+                                        "취소"
+                                    ],
+                                    "selected": "{status}"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
