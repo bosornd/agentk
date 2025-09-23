@@ -79,7 +79,14 @@
                             "children": [
                                 {
                                     "type": "text",
-                                    "value": "예약할 레스토랑 - {name}",
+                                    "value": "예약할 레스토랑",
+                                    "style": {
+                                        "fontSize": 16
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "value": "{name}",
                                     "style": {
                                         "fontSize": 24,
                                         "fontWeight": "bold"

@@ -265,6 +265,11 @@ class _ChatPageState extends State<ChatPage> {
               if (parsed is Map && parsed.containsKey('window')) {
                 final window = parsed['window'];
                 if (window is Map<String, dynamic>) {
+                  final windowId = window['id'] as String?;
+                  // 항상 드롭다운 상태를 새로 초기화
+                  if (windowId != null) {
+                    _dropdownSelections.remove(windowId);
+                  }
                   setState(() {
                     _infoWindow = window;
                   });
@@ -319,6 +324,11 @@ class _ChatPageState extends State<ChatPage> {
   // window/card 데이터용 빌더 (공통)
   Widget _buildWindowWidget(dynamic window) {
     if (window is Map<String, dynamic> && window.containsKey('widgets')) {
+      // window의 id가 바뀌거나 새 window가 오면 드롭다운 상태를 초기화(위에서 remove로 처리)
+      final cardId = window['id'] as String?;
+      if (cardId != null && !_dropdownSelections.containsKey(cardId)) {
+        _dropdownSelections[cardId] = {};
+      }
       return _buildCardOrWindowWidget(window);
     }
     return Text(window.toString());
