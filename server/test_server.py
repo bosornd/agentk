@@ -1,9 +1,8 @@
+import asyncio
+
 # pip install fastapi uvicorn
 from fastapi import FastAPI, Request, HTTPException
-
-import asyncio
 from fastapi.responses import StreamingResponse
-import uuid
 
 app = FastAPI()
 
@@ -59,6 +58,13 @@ s2 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status"
 s3 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "대기"}}, ensure_ascii=False)
 s4 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "확정"}}, ensure_ascii=False)
 
+replies = {
+    'r': r, 'r1': r1, 'r2': r2, 'r3': r3,
+    'w': w, 's1': s1, 's2': s2, 's3': s3, 's4': s4
+}
+
+import uuid
+
 @app.post("/session")           # localhost:5000/session
 async def create_session():
     session_id = str(uuid.uuid4())
@@ -81,16 +87,8 @@ async def chat(request: Request):
         reply = input()
         if reply.strip() == '':
             break
-        elif reply.strip() == 'r': reply = r
-        elif reply.strip() == 'r1': reply = r1
-        elif reply.strip() == 'r2': reply = r2
-        elif reply.strip() == 'r3': reply = r3
-        elif reply.strip() == 'w': reply = w
-        elif reply.strip() == 's1': reply = s1
-        elif reply.strip() == 's2': reply = s2
-        elif reply.strip() == 's3': reply = s3
-        elif reply.strip() == 's4': reply = s4
-
+        
+        reply = replies.get(reply.strip(), reply)
         await message_queues[session_id].put(reply)
 
     return {"result": "ok"}
@@ -107,4 +105,4 @@ async def stream(session_id: str):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-# FastAPI 실행 명령: uvicorn test_server:app --host 0.0.0.0 --port 5000
+# FastAPI 실행 명령: uvicorn test_server:app --port 5000 --reload
