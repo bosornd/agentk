@@ -408,12 +408,15 @@ class _ChatPageState extends State<ChatPage> {
                     _latestCards[cardId] = card;
                   }
                 } else {
-                  chatMsg = ChatMessage(text: msg, isUser: false);
+                  // 메시지에 현재 상태 변수를 적용하여 치환
+                  final interpolatedMsg = _interpolateText(msg);
+                  chatMsg = ChatMessage(text: interpolatedMsg, isUser: false);
                 }
               }
             } catch (e) {
               debugPrint('[Agent Stream] JSON decode error: $e');
-              chatMsg = ChatMessage(text: msg, isUser: false);
+              final interpolatedMsg = _interpolateText(msg);
+              chatMsg = ChatMessage(text: interpolatedMsg, isUser: false);
             }
             if (!isStateMsg && !isWindowMsg && chatMsg != null) {
               setState(() {
