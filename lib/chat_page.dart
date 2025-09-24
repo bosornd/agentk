@@ -30,9 +30,6 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  // Dropdown state: {cardId: {dropdownIndex: selectedValue}}
-  final Map<String, Map<int, String?>> _dropdownSelections = {};
-
   // 정보 윈도우에 표시할 데이터 (window 키워드 사용)
   dynamic _infoWindow;
 
@@ -226,73 +223,13 @@ class _ChatPageState extends State<ChatPage> {
               : null,
           child: Text(w['text'] ?? ''),
         );
-      case 'dropdown':
-        final items = w['items'] as List<dynamic>?;
-        if (items == null || items.isEmpty) return const SizedBox();
-        final hint = w['hint'] as String?;
-        String? selected;
-        if (cardId != null) {
-          _dropdownSelections.putIfAbsent(cardId, () => {});
-          selected = _dropdownSelections[cardId]![dropdownIndex];
-        }
-        return DropdownButton<String>(
-          value: selected,
-          hint: hint != null ? Text(hint) : null,
-          items: items
-              .map<DropdownMenuItem<String>>(
-                (item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item.toString()),
-                ),
-              )
-              .toList(),
-          onChanged: (value) {
-            setState(() {
-              if (cardId != null) {
-                _dropdownSelections[cardId]![dropdownIndex] = value;
-              }
-            });
-          },
-        );
-      // --- dropbox 지원 추가 ---
-      case 'dropbox':
-        final items = w['items'] as List<dynamic>? ?? [];
-        final label = w['label'] as String? ?? '';
-        String? selected = w['selected']?.toString();
-        if (cardId != null) {
-          _dropdownSelections.putIfAbsent(cardId, () => {});
-          selected = _dropdownSelections[cardId]![dropdownIndex] ?? selected;
-        }
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (label.isNotEmpty) Text(label),
-            DropdownButton<String>(
-              value: selected,
-              items: items
-                  .map<DropdownMenuItem<String>>(
-                    (item) => DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item.toString()),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  if (cardId != null) {
-                    _dropdownSelections[cardId]![dropdownIndex] = value;
-                  }
-                });
-              },
-            ),
-          ],
-        );
       case 'row':
         final children = w['children'] as List<dynamic>?;
         if (children == null) return const SizedBox();
         return Row(
           mainAxisAlignment: _parseMainAxisAlignment(w['mainAxisAlignment']),
           crossAxisAlignment: _parseCrossAxisAlignment(w['crossAxisAlignment']),
+          textBaseline: TextBaseline.alphabetic,
           children: children
               .map<Widget>(
                 (c) => Expanded(child: _buildWidgetFromJson(c, cardId: cardId)),
@@ -305,12 +242,12 @@ class _ChatPageState extends State<ChatPage> {
         return Column(
           mainAxisAlignment: _parseMainAxisAlignment(w['mainAxisAlignment']),
           crossAxisAlignment: _parseCrossAxisAlignment(w['crossAxisAlignment']),
-          mainAxisSize: MainAxisSize.max,
+          textBaseline: TextBaseline.alphabetic,
+          //          mainAxisSize: MainAxisSize.max,
           children: children
               .map<Widget>((c) => _buildWidgetFromJson(c, cardId: cardId))
               .toList(),
         );
-      // --- input 위젯 지원 (type: 'input') ---
       case 'input':
         final width = w['width'] is int ? w['width'] as int : null;
         final varName = w['variable'] as String? ?? w['var'] as String?;
@@ -326,8 +263,10 @@ class _ChatPageState extends State<ChatPage> {
             });
           }
         });
+
         return SizedBox(
           width: width?.toDouble(),
+          height: 35.0,
           child: TextField(
             controller: controller,
             focusNode: focusNode,
@@ -450,10 +389,7 @@ class _ChatPageState extends State<ChatPage> {
                 if (window is Map<String, dynamic>) {
                   // 변수 초기화: window 내 모든 text 위젯의 {var}를 찾아 _appState에 없으면 ""로
                   _initializeVarsFromWidgets(window['widgets']);
-                  final windowId = window['id'] as String?;
-                  if (windowId != null) {
-                    _dropdownSelections.remove(windowId);
-                  }
+                  // ...dropdownSelections removed...
                   setState(() {
                     _infoWindow = window;
                     _latestWindow = window;
@@ -540,10 +476,6 @@ class _ChatPageState extends State<ChatPage> {
   // window/card 데이터용 빌더 (공통)
   Widget _buildWindowWidget(dynamic window) {
     if (window is Map<String, dynamic> && window.containsKey('widgets')) {
-      final cardId = window['id'] as String?;
-      if (cardId != null && !_dropdownSelections.containsKey(cardId)) {
-        _dropdownSelections[cardId] = {};
-      }
       // 항상 최신 상태(window)로 렌더링
       return _buildCardOrWindowWidget(_latestWindow ?? window);
     }
