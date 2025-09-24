@@ -10,11 +10,19 @@ class ChatPage extends StatefulWidget {
   final String sessionName;
   final String sessionId;
   final List<ChatMessage> initialMessages;
+  // 추가: 세션 상태 복원용 파라미터
+  final Map<String, dynamic>? savedState;
+  final dynamic savedInfoWindow;
+  final Map<String, dynamic>? savedWindow;
+
   const ChatPage({
     super.key,
     required this.sessionName,
     required this.sessionId,
     required this.initialMessages,
+    this.savedState,
+    this.savedInfoWindow,
+    this.savedWindow,
   });
 
   @override
@@ -28,6 +36,13 @@ class _ChatPageState extends State<ChatPage> {
   // 정보 윈도우에 표시할 데이터 (window 키워드 사용)
   dynamic _infoWindow;
 
+  // 상태 변수 맵 (예: name 등)
+  final Map<String, dynamic> _appState = {};
+
+  // 서버에서 받은 최신 카드/윈도우 상태
+  Map<String, dynamic>? _latestWindow;
+  final Map<String, Map<String, dynamic>> _latestCards = {};
+
   // 카드/윈도우 위젯 생성 (window, card 모두 지원)
   Widget _buildCardOrWindowWidget(Map<String, dynamic> data) {
     final widgets = data['widgets'] as List<dynamic>?;
@@ -40,6 +55,72 @@ class _ChatPageState extends State<ChatPage> {
         child: _buildWidgetList(widgets, cardId: cardId),
       ),
     );
+  }
+
+  // 임의 깊이의 배열/맵 경로를 재귀적으로 파싱하여 변수 치환
+  String _interpolateText(String text) {
+    return text.replaceAllMapped(RegExp(r'\{([^\{\}]+)\}'), (match) {
+      final expr = match.group(1)!.replaceAll(' ', '');
+      try {
+        dynamic value = _appState;
+        value = _resolvePath(value, expr);
+        return value?.toString() ?? '';
+      } catch (_) {
+        return '';
+      }
+    });
+  }
+
+  // "a[0].b.c[selected].d.e"와 같은 경로를 재귀적으로 파싱 (selected도 변수로 지원)
+  dynamic _resolvePath(dynamic root, String path) {
+    if (path.isEmpty) return root;
+    final reg = RegExp(r'^([a-zA-Z_]\w*)'); // 변수명
+    final arrReg = RegExp(r'^\[([^\[\]]+)\]'); // [숫자] 또는 [변수]
+    var rest = path;
+    dynamic curr = root;
+
+    while (rest.isNotEmpty && curr != null) {
+      if (reg.hasMatch(rest)) {
+        final m = reg.firstMatch(rest)!;
+        final key = m.group(1)!;
+        if (curr is Map && curr.containsKey(key)) {
+          curr = curr[key];
+        } else {
+          return '';
+        }
+        rest = rest.substring(key.length);
+      } else if (arrReg.hasMatch(rest)) {
+        final m = arrReg.firstMatch(rest)!;
+        var idxStr = m.group(1)!;
+        int? idx;
+        // 인덱스가 숫자가 아니면 상태 변수로 간주
+        if (RegExp(r'^\d+$').hasMatch(idxStr)) {
+          idx = int.parse(idxStr);
+        } else {
+          // 변수 치환 (예: selected)
+          final idxVal = _appState[idxStr];
+          if (idxVal is int) {
+            idx = idxVal;
+          } else if (idxVal is String && int.tryParse(idxVal) != null) {
+            idx = int.parse(idxVal);
+          } else {
+            return '';
+          }
+        }
+        if (curr is List && idx < curr.length) {
+          curr = curr[idx];
+        } else {
+          return '';
+        }
+        rest = rest.substring(m.group(0)!.length);
+      } else if (rest.startsWith('.')) {
+        rest = rest.substring(1);
+      } else {
+        // 예기치 않은 형식
+        return '';
+      }
+    }
+    return curr;
   }
 
   // 위젯 리스트 빌더
@@ -75,8 +156,11 @@ class _ChatPageState extends State<ChatPage> {
         FontWeight? fontWeight = style != null && style['fontWeight'] == 'bold'
             ? FontWeight.bold
             : null;
+        // 변수 치환 적용
+        final rawText = w['value'] ?? '';
+        final text = _interpolateText(rawText);
         return Text(
-          w['value'] ?? '',
+          text,
           style: TextStyle(
             fontSize: fontSize,
             color: color,
@@ -177,6 +261,34 @@ class _ChatPageState extends State<ChatPage> {
               .map<Widget>((c) => _buildWidgetFromJson(c, cardId: cardId))
               .toList(),
         );
+      // --- text_input 지원 추가 ---
+      case 'text_input':
+        final label = w['label'] as String? ?? '';
+        final varName = w['var'] as String?; // 상태 변수명
+        final initialValue = varName != null && _appState[varName] != null
+            ? _appState[varName].toString()
+            : '';
+        final controller = TextEditingController(text: initialValue);
+        return Row(
+          children: [
+            if (label.isNotEmpty) Text(label),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                onChanged: (value) {
+                  if (varName != null) {
+                    setState(() {
+                      _appState[varName] = value;
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: w['hint'] as String? ?? '',
+                ),
+              ),
+            ),
+          ],
+        );
       default:
         return const SizedBox();
     }
@@ -240,6 +352,18 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     _messages = List<ChatMessage>.from(widget.initialMessages);
     _httpClient = http.Client();
+
+    // 세션 복원: 전달받은 상태가 있으면 복원
+    if (widget.savedState != null) {
+      _appState.addAll(widget.savedState!);
+    }
+    if (widget.savedInfoWindow != null) {
+      _infoWindow = widget.savedInfoWindow;
+    }
+    if (widget.savedWindow != null) {
+      _latestWindow = widget.savedWindow;
+    }
+
     _startAgentStream();
   }
 
@@ -258,29 +382,49 @@ class _ChatPageState extends State<ChatPage> {
             String? cardId;
             Map<String, dynamic>? card;
             bool isWindowMsg = false;
+            bool isStateMsg = false;
             try {
               final parsed = json.decode(msg);
               debugPrint('[Agent Stream] Parsed: $parsed');
+              // 상태(state) 메시지 처리
+              if (parsed is Map && parsed.containsKey('state')) {
+                final state = parsed['state'];
+                if (state is Map<String, dynamic>) {
+                  setState(() {
+                    _appState.addAll(state);
+                  });
+                  isStateMsg = true;
+                }
+              }
               // window 키워드가 있으면 정보 윈도우로 사용
-              if (parsed is Map && parsed.containsKey('window')) {
+              if (!isStateMsg &&
+                  parsed is Map &&
+                  parsed.containsKey('window')) {
                 final window = parsed['window'];
                 if (window is Map<String, dynamic>) {
+                  // 변수 초기화: window 내 모든 text 위젯의 {var}를 찾아 _appState에 없으면 ""로
+                  _initializeVarsFromWidgets(window['widgets']);
                   final windowId = window['id'] as String?;
-                  // 항상 드롭다운 상태를 새로 초기화
                   if (windowId != null) {
                     _dropdownSelections.remove(windowId);
                   }
                   setState(() {
                     _infoWindow = window;
+                    _latestWindow = window;
                   });
                   isWindowMsg = true;
                 }
               }
-              if (!isWindowMsg) {
+              if (!isStateMsg && !isWindowMsg) {
                 if (parsed is Map && parsed.containsKey('card')) {
                   card = parsed['card'] as Map<String, dynamic>;
+                  // 변수 초기화: card 내 모든 text 위젯의 {var}를 찾아 _appState에 없으면 ""로
+                  _initializeVarsFromWidgets(card['widgets']);
                   cardId = card['id'] as String?;
                   chatMsg = ChatMessage(text: '', isUser: false, card: card);
+                  if (cardId != null) {
+                    _latestCards[cardId] = card;
+                  }
                 } else {
                   chatMsg = ChatMessage(text: msg, isUser: false);
                 }
@@ -289,7 +433,7 @@ class _ChatPageState extends State<ChatPage> {
               debugPrint('[Agent Stream] JSON decode error: $e');
               chatMsg = ChatMessage(text: msg, isUser: false);
             }
-            if (!isWindowMsg && chatMsg != null) {
+            if (!isStateMsg && !isWindowMsg && chatMsg != null) {
               setState(() {
                 if (cardId != null) {
                   final idx = _messages.indexWhere(
@@ -321,15 +465,41 @@ class _ChatPageState extends State<ChatPage> {
         });
   }
 
+  // card/window 내 text 위젯의 {var} 패턴을 찾아 _appState에 없으면 null로 초기화
+  void _initializeVarsFromWidgets(dynamic widgets) {
+    if (widgets is List) {
+      for (final w in widgets) {
+        _initializeVarsFromWidgets(w);
+      }
+    } else if (widgets is Map<String, dynamic>) {
+      if (widgets['type'] == 'text' && widgets['value'] is String) {
+        final matches = RegExp(r'\{(\w+)\}').allMatches(widgets['value']);
+        for (final m in matches) {
+          final varName = m.group(1);
+          if (varName != null && !_appState.containsKey(varName)) {
+            _appState[varName] = null;
+          }
+        }
+      }
+      // 재귀적으로 children/widgets도 검사
+      if (widgets['children'] != null) {
+        _initializeVarsFromWidgets(widgets['children']);
+      }
+      if (widgets['widgets'] != null) {
+        _initializeVarsFromWidgets(widgets['widgets']);
+      }
+    }
+  }
+
   // window/card 데이터용 빌더 (공통)
   Widget _buildWindowWidget(dynamic window) {
     if (window is Map<String, dynamic> && window.containsKey('widgets')) {
-      // window의 id가 바뀌거나 새 window가 오면 드롭다운 상태를 초기화(위에서 remove로 처리)
       final cardId = window['id'] as String?;
       if (cardId != null && !_dropdownSelections.containsKey(cardId)) {
         _dropdownSelections[cardId] = {};
       }
-      return _buildCardOrWindowWidget(window);
+      // 항상 최신 상태(window)로 렌더링
+      return _buildCardOrWindowWidget(_latestWindow ?? window);
     }
     return Text(window.toString());
   }
@@ -373,13 +543,23 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.of(context).pop(_messages);
-        return false;
-      },
+    return PopScope(
       child: Scaffold(
-        appBar: AppBar(title: Text(widget.sessionName)),
+        appBar: AppBar(
+          title: Text(widget.sessionName),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              // 세션 상태를 pop으로 전달
+              Navigator.of(context).pop({
+                'messages': _messages,
+                'state': Map<String, dynamic>.from(_appState),
+                'infoWindow': _infoWindow,
+                'window': _latestWindow,
+              });
+            },
+          ),
+        ),
         body: Column(
           children: [
             // 정보 윈도우: window 데이터가 있으면 상단에 표시
@@ -407,8 +587,13 @@ class _ChatPageState extends State<ChatPage> {
                       : const Icon(Icons.smart_toy, color: Colors.deepPurple);
                   Widget content;
                   if (msg.card != null) {
-                    // Render card message
-                    content = _buildCardOrWindowWidget(msg.card!);
+                    // Render card message (항상 최신 상태로)
+                    final cardId = msg.card?['id'] as String?;
+                    final cardData =
+                        cardId != null && _latestCards.containsKey(cardId)
+                        ? _latestCards[cardId]!
+                        : msg.card!;
+                    content = _buildCardOrWindowWidget(cardData);
                   } else {
                     content = Text(msg.text);
                   }

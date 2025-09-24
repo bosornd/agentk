@@ -18,6 +18,9 @@ with open(os.path.join(os.path.dirname(__file__), "templates.json"), "r", encodi
 with open(os.path.join(os.path.dirname(__file__), "restaurants.json"), "r", encoding="utf-8") as f:
     restaurants = json.load(f)
 
+with open(os.path.join(os.path.dirname(__file__), "restaurant_templates.json"), "r", encoding="utf-8") as f:
+    restaurant_templates = json.load(f)
+
 def format_dict(d, values):
     if isinstance(d, dict):
         return {k: format_dict(v, values) for k, v in d.items()}
@@ -33,20 +36,17 @@ def format_dict(d, values):
                     return ""
             return d.format_map(DefaultDict(values))
     return d
-    
-r1 = json.dumps(format_dict(templates["restaurant_card"], restaurants[0]), ensure_ascii=False)
-r2 = json.dumps(format_dict(templates["restaurant_card"], restaurants[1]), ensure_ascii=False)
-r3 = json.dumps(format_dict(templates["restaurant_card"], restaurants[2]), ensure_ascii=False)
 
-s1 = {"status": "생성"}
-s2 = {"datetime": "2024-10-10 19:00", "people": 2, "status": "생성"}
-s3 = {"datetime": "2024-10-10 19:00", "people": 2, "status": "대기"}
-s4 = {"datetime": "2024-10-10 19:00", "people": 2, "status": "확정"}
+r = json.dumps({"state": {"restaurants": restaurants}}, ensure_ascii=False)
+r1 = json.dumps(format_dict(templates["restaurant_card"], restaurant_templates[0]), ensure_ascii=False)
+r2 = json.dumps(format_dict(templates["restaurant_card"], restaurant_templates[1]), ensure_ascii=False)
+r3 = json.dumps(format_dict(templates["restaurant_card"], restaurant_templates[2]), ensure_ascii=False)
 
-m1 = json.dumps(format_dict(templates["reservation_state"], {**restaurants[0], **s1}), ensure_ascii=False)
-m2 = json.dumps(format_dict(templates["reservation_state"], {**restaurants[0], **s2}), ensure_ascii=False)
-m3 = json.dumps(format_dict(templates["reservation_state"], {**restaurants[0], **s3}), ensure_ascii=False)
-m4 = json.dumps(format_dict(templates["reservation_state"], {**restaurants[0], **s4}), ensure_ascii=False)
+w = json.dumps(templates["reservation_state"], ensure_ascii=False)
+s1 = json.dumps({"state": {"selected": 0, "status": "생성"}}, ensure_ascii=False)
+s2 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "생성"}}, ensure_ascii=False)
+s3 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "대기"}}, ensure_ascii=False)
+s4 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "확정"}}, ensure_ascii=False)
 
 @app.post("/session")           # localhost:5000/session
 async def create_session():
@@ -70,13 +70,15 @@ async def chat(request: Request):
         reply = input()
         if reply.strip() == '':
             break
+        elif reply.strip() == 'r': reply = r
         elif reply.strip() == 'r1': reply = r1
         elif reply.strip() == 'r2': reply = r2
         elif reply.strip() == 'r3': reply = r3
-        elif reply.strip() == 'm1': reply = m1
-        elif reply.strip() == 'm2': reply = m2
-        elif reply.strip() == 'm3': reply = m3
-        elif reply.strip() == 'm4': reply = m4
+        elif reply.strip() == 'w': reply = w
+        elif reply.strip() == 's1': reply = s1
+        elif reply.strip() == 's2': reply = s2
+        elif reply.strip() == 's3': reply = s3
+        elif reply.strip() == 's4': reply = s4
 
         await message_queues[session_id].put(reply)
 

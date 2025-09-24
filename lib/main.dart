@@ -4,7 +4,6 @@ import 'config.dart';
 import 'session_info.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// ...existing code...
 
 class ChatMessage {
   final String text;
@@ -59,6 +58,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<SessionInfo> sessions = [];
   Map<String, List<ChatMessage>> sessionMessages = {};
+  Map<String, Map<String, dynamic>> sessionStates = {};
+  Map<String, dynamic> sessionInfoWindows = {};
+  Map<String, Map<String, dynamic>?> sessionWindows = {};
   int? selectedSessionIndex;
 
   Future<void> _addSession() async {
@@ -121,7 +123,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _openChatPage(String sessionTitle, String sessionId) async {
-    final result = await Navigator.of(context).push<List<ChatMessage>>(
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ChatPage(
           sessionName: sessionTitle,
@@ -129,12 +131,22 @@ class _MyHomePageState extends State<MyHomePage> {
           initialMessages: List<ChatMessage>.from(
             sessionMessages[sessionId] ?? [],
           ),
+          savedState: sessionStates[sessionId],
+          savedInfoWindow: sessionInfoWindows[sessionId],
+          savedWindow: sessionWindows[sessionId],
         ),
       ),
     );
-    if (result != null) {
+    if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        sessionMessages[sessionId] = result;
+        sessionMessages[sessionId] = List<ChatMessage>.from(
+          result['messages'] ?? [],
+        );
+        sessionStates[sessionId] = Map<String, dynamic>.from(
+          result['state'] ?? {},
+        );
+        sessionInfoWindows[sessionId] = result['infoWindow'];
+        sessionWindows[sessionId] = result['window'];
       });
     }
   }

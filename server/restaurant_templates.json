@@ -1,0 +1,23 @@
+[
+    {
+        "id": "{restaurants[0].id}",
+        "name": "{restaurants[0].name}",
+        "address": "{restaurants[0].address}",
+        "stars": "{restaurants[0].stars}",
+        "review_count": "{restaurants[0].review_count}"
+    },
+    {
+        "id": "{restaurants[1].id}",
+        "name": "{restaurants[1].name}",
+        "address": "{restaurants[1].address}",
+        "stars": "{restaurants[1].stars}",
+        "review_count": "{restaurants[1].review_count}"
+    },
+    {
+        "id": "{restaurants[2].id}",
+        "name": "{restaurants[2].name}",
+        "address": "{restaurants[2].address}",
+        "stars": "{restaurants[2].stars}",
+        "review_count": "{restaurants[2].review_count}"
+    }
+]

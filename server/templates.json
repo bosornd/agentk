@@ -68,7 +68,7 @@
     },
     "reservation_state": {
         "window": {
-            "id": "{id}",
+            "id": "{restaurants[selected].id}",
             "widgets": [
                 {
                     "type": "row",
@@ -86,7 +86,7 @@
                                 },
                                 {
                                     "type": "text",
-                                    "value": "{name}",
+                                    "value": "{restaurants[selected].name}",
                                     "style": {
                                         "fontSize": 24,
                                         "fontWeight": "bold"
@@ -98,7 +98,7 @@
                                     "children": [
                                         {
                                             "type": "text",
-                                            "value": "리뷰 {review_count}개",
+                                            "value": "리뷰 {restaurants[selected].review_count}개",
                                             "style": {
                                                 "fontSize": 16,
                                                 "color": "#888888"
@@ -106,7 +106,7 @@
                                         },
                                         {
                                             "type": "text",
-                                            "value": "❤️ {stars}",
+                                            "value": "❤️ {restaurants[selected].stars}",
                                             "style": {
                                                 "fontSize": 16
                                             }
@@ -127,15 +127,8 @@
                                     "value": "인원수: {people} 명"
                                 },
                                 {
-                                    "type": "dropbox",
-                                    "label": "상태: ",
-                                    "items": [
-                                        "생성",
-                                        "대기",
-                                        "확정",
-                                        "취소"
-                                    ],
-                                    "selected": "{status}"
+                                    "type": "text",
+                                    "value": "상태: {status}"
                                 }
                             ]
                         }
