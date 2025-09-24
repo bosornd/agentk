@@ -56,8 +56,10 @@
                             "children": [
                                 {
                                     "type": "button",
-                                    "text": "예약",
-                                    "action": "{name}로 예약해줘."
+                                    "text": "선택",
+                                    "actions": [
+                                        "{name}로 예약해줘."
+                                    ]
                                 }
                             ]
                         }
@@ -117,14 +119,57 @@
                         },
                         {
                             "type": "column",
+                            "mainAxisAlignment": "end",
+                            "crossAxisAlignment": "end",
                             "children": [
                                 {
-                                    "type": "text",
-                                    "value": "예약 일시: {datetime}"
+                                    "type": "row",
+                                    "children": [
+                                        {
+                                            "type": "text",
+                                            "value": "인원수: "
+                                        },
+                                        {
+                                            "type": "input",
+                                            "width": 1,
+                                            "variable": "people",
+                                            "hint": "4"
+                                        },
+                                        {
+                                            "type": "text",
+                                            "value": "명"
+                                        }
+                                    ]
                                 },
                                 {
-                                    "type": "text",
-                                    "value": "인원수: {people} 명"
+                                    "type": "row",
+                                    "children": [
+                                        {
+                                            "type": "text",
+                                            "value": "예약 일시: "
+                                        },
+                                        {
+                                            "type": "input",
+                                            "width": 20,
+                                            "variable": "datetime",
+                                            "hint": "YYYY-MM-DD HH:MM"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "column",
+                            "mainAxisAlignment": "end",
+                            "crossAxisAlignment": "end",
+                            "children": [
+                                {
+                                    "type": "button",
+                                    "text": "예약",
+                                    "enabled": "{datetime && people}",
+                                    "actions": [
+                                        "{datetime}, {people}명, {restaurants[selected].name}로 예약해줘."
+                                    ]
                                 },
                                 {
                                     "type": "text",

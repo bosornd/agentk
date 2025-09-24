@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'main.dart'; // ChatMessage 사용
+import 'simple_expr_evaluator.dart';
 import 'config.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -168,13 +168,62 @@ class _ChatPageState extends State<ChatPage> {
           ),
         );
       case 'button':
+        final evaluator = SimpleExprEvaluator(_appState);
+        // enabled: '{...}' 형태면 수식 평가, 아니면 기본 true
+        bool enabled = true;
+        if (w['enabled'] is String &&
+            w['enabled'].toString().startsWith('{') &&
+            w['enabled'].toString().endsWith('}')) {
+          final expr = w['enabled'].toString().substring(
+            1,
+            w['enabled'].toString().length - 1,
+          );
+          final result = evaluator.eval(expr);
+          enabled = result is bool
+              ? result
+              : (result != null &&
+                    result != false &&
+                    result.toString() != '0' &&
+                    result.toString() != '');
+        }
         return ElevatedButton(
-          onPressed: () {
-            final action = w['action'] as String?;
-            if (action != null && action.isNotEmpty) {
-              _sendMessage(action);
-            }
-          },
+          onPressed: enabled
+              ? () async {
+                  final actions = w['actions'] as List<dynamic>?;
+                  if (actions != null && actions.isNotEmpty) {
+                    for (final action in actions) {
+                      if (action is String && action.isNotEmpty) {
+                        String msg = action;
+                        if (msg.startsWith('{') && msg.endsWith('}')) {
+                          final expr = msg.substring(1, msg.length - 1);
+                          final evalResult = evaluator.eval(expr);
+                          msg = evalResult?.toString() ?? '';
+                        } else {
+                          msg = _interpolateText(msg);
+                        }
+                        await _sendMessage(msg);
+                      } else if (action is Map<String, dynamic>) {
+                        final evaluatedMap = <String, dynamic>{};
+                        action.forEach((key, value) {
+                          if (value is String &&
+                              value.startsWith('{') &&
+                              value.endsWith('}')) {
+                            final expr = value.substring(1, value.length - 1);
+                            evaluatedMap[key] = evaluator.eval(expr);
+                          } else if (value is String) {
+                            evaluatedMap[key] = _interpolateText(value);
+                          } else {
+                            evaluatedMap[key] = value;
+                          }
+                        });
+                        setState(() {
+                          _appState.addAll(evaluatedMap);
+                        });
+                      }
+                    }
+                  }
+                }
+              : null,
           child: Text(w['text'] ?? ''),
         );
       case 'dropdown':
@@ -261,33 +310,30 @@ class _ChatPageState extends State<ChatPage> {
               .map<Widget>((c) => _buildWidgetFromJson(c, cardId: cardId))
               .toList(),
         );
-      // --- text_input 지원 추가 ---
-      case 'text_input':
-        final label = w['label'] as String? ?? '';
-        final varName = w['var'] as String?; // 상태 변수명
+      // --- input 위젯 지원 (type: 'input') ---
+      case 'input':
+        final width = w['width'] is int ? w['width'] as int : null;
+        final varName = w['variable'] as String? ?? w['var'] as String?;
         final initialValue = varName != null && _appState[varName] != null
             ? _appState[varName].toString()
             : '';
         final controller = TextEditingController(text: initialValue);
-        return Row(
-          children: [
-            if (label.isNotEmpty) Text(label),
-            Expanded(
-              child: TextField(
-                controller: controller,
-                onChanged: (value) {
-                  if (varName != null) {
-                    setState(() {
-                      _appState[varName] = value;
-                    });
-                  }
-                },
-                decoration: InputDecoration(
-                  hintText: w['hint'] as String? ?? '',
-                ),
-              ),
-            ),
-          ],
+        final focusNode = FocusNode();
+        focusNode.addListener(() {
+          if (!focusNode.hasFocus && varName != null) {
+            setState(() {
+              _appState[varName] = controller.text;
+            });
+          }
+        });
+        return SizedBox(
+          width: width?.toDouble(),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            style: const TextStyle(fontSize: 14),
+            decoration: InputDecoration(hintText: w['hint'] as String? ?? ''),
+          ),
         );
       default:
         return const SizedBox();
