@@ -134,7 +134,7 @@
                                         {
                                             "type": "input",
                                             "variable": "people",
-                                            "hint": "4"
+                                            "hint": "N"
                                         },
                                         {
                                             "type": "text",
