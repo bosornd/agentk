@@ -28,9 +28,6 @@ with open(os.path.join(os.path.dirname(__file__), "templates.json"), "r", encodi
 with open(os.path.join(os.path.dirname(__file__), "restaurants.json"), "r", encoding="utf-8") as f:
     restaurants = json.load(f)
 
-with open(os.path.join(os.path.dirname(__file__), "restaurant_templates.json"), "r", encoding="utf-8") as f:
-    restaurant_templates = json.load(f)
-
 def format_dict(d, values):
     if isinstance(d, dict):
         return {k: format_dict(v, values) for k, v in d.items()}
@@ -47,12 +44,24 @@ def format_dict(d, values):
             return d.format_map(DefaultDict(values))
     return d
 
-r = json.dumps({"state": {"restaurants": restaurants}}, ensure_ascii=False)
-r1 = json.dumps(format_dict(templates["restaurant_card"], restaurant_templates[0]), ensure_ascii=False)
-r2 = json.dumps(format_dict(templates["restaurant_card"], restaurant_templates[1]), ensure_ascii=False)
-r3 = json.dumps(format_dict(templates["restaurant_card"], restaurant_templates[2]), ensure_ascii=False)
+def restaurant_card_message(idx: int) -> str:
+    fields = ["id", "name", "address", "stars", "review_count"]
+    restaurant = {field: f"{{restaurants[{idx}].{field}}}" for field in fields}
 
-w = json.dumps(templates["reservation_state"], ensure_ascii=False)
+    return json.dumps(format_dict(templates["restaurant_card"], restaurant), ensure_ascii=False)
+
+def state_message(state: dict) -> str:
+    return json.dumps({"state": state}, ensure_ascii=False)
+
+def reservation_message() -> str:
+    return json.dumps(templates["reservation_state"], ensure_ascii=False)
+
+r1 = restaurant_card_message(0)
+r2 = restaurant_card_message(1)
+r3 = restaurant_card_message(2)
+w = reservation_message()
+
+r = json.dumps({"state": {"restaurants": restaurants}}, ensure_ascii=False)
 s1 = json.dumps({"state": {"selected": 0, "status": "생성"}}, ensure_ascii=False)
 s2 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "생성"}}, ensure_ascii=False)
 s3 = json.dumps({"state": {"datetime": "2024-10-10 19:00", "people": 2, "status": "대기"}}, ensure_ascii=False)
@@ -101,7 +110,7 @@ async def stream(session_id: str):
     async def event_generator():
         while True:
             msg = await message_queues[session_id].get()
-            yield f"{msg}\n\n"
+            yield f"{msg}\n\n"          # "\n\n" is required for SSE
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
